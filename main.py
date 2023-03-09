@@ -10,6 +10,8 @@ intents = discord.Intents.default()
 intents.message_content = True
 client = commands.Bot(command_prefix="!", intents=intents)
 
+prefix = ["!","@","#","$","%","&","*","?"]
+
 # This function updates the banned words everytime it is called. In this case it is called as the bot is first started and when it is called so it is constantly keeping up with the changes
 def banned_words():
   # Connect to banned words data base
@@ -184,7 +186,28 @@ async def add_banned_word(ctx, *, new_banned_words=None):
   else:
     await ctx.channel.send("You do not have permission to use this command")
 
+@client.command(name="info")
+async def info(ctx):
+  if ctx.message.author.guild_permissions.administrator:
+    await ctx.channel.send("INFORMATION") #ADD INFORMATION ABOUT ALL COMMANDS INCLUDING MODERATOR COMMANDS
+  else:
+    await ctx.channel.send("INFORMATION") #ADD INFORMATION ABOUT ALL COMANNDS EXCEPT MODERATOR COMMANDS
 
+
+@client.command(name="changeprefix")
+async def command_prefix(ctx, new_command_prefix = None):
+  if ctx.message.author.guild_permissions.administrator:
+    if new_command_prefix in prefix:
+      client.command_prefix = new_command_prefix
+      await ctx.channel.send(f"'{new_command_prefix}' is your new command prefix.")
+    elif new_command_prefix == None:
+        await ctx.channel.send("You need to add a new prefix after that command")
+    else:
+      await ctx.channel.send("That is not a valid prefix")
+  else:
+    await ctx.channel.send("You do not have permissions to use that command")
+
+  
 client.run(TOKEN)
 
 if __name__ == '__main__':

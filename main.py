@@ -10,13 +10,38 @@ TOKEN = os.environ["TOKEN"]
 intents = discord.Intents.default()
 intents.message_content = True
 client = commands.Bot(command_prefix="!", intents=intents)
-banned_words = ["Banned word"]
+
+# This function updates the banned words everytime it is called. In this case it is called as the bot is first started and when it is called so it is constantly keeping up with the changes
+
+def banned_words():
+  # Connect to banned words data base
+  conn = sqlite3.connect("bannedwords.db")
+
+  # Make a cursor object so we can edit data
+  cursor = conn.cursor()
+
+  # Select all quotes from the database
+  cursor.execute("SELECT word FROM banned_words")
+  
+  # Get all the data from the file
+  rows = cursor.fetchall()
+
+  # Print out the data
+  for row in rows:
+    print(row)
+
+  # Make a list of banned words from file
+  banned_words = rows
+  print(banned_words)
+  # Close connection
+  conn.close()
+  return banned_words
 
 
 @client.command(name="randomquote")
 async def random_quote(ctx):
   # Connect to the database
-  conn = sqlite3.connect('quotes.db')
+  conn = sqlite3.connect("quotes.db")
 
   # Create a cursor object
   cursor = conn.cursor()
@@ -45,6 +70,7 @@ async def random_quote(ctx):
   # Send the quote to the user where row[i][0] is the i value of the last element
   await ctx.channel.send(quote)
 
+
 @client.command(name="addquote")
 async def add_quote(ctx, *, quote = None):
   # Connect to the database
@@ -63,7 +89,7 @@ async def add_quote(ctx, *, quote = None):
     conn.close()
     
     await ctx.channel.send("You need to add a quote after that command")
-  elif quote in banned_words:
+  elif quote in str(banned_words()).lower():
     # Closes the database connection
     conn.close()
     
@@ -81,4 +107,43 @@ async def add_quote(ctx, *, quote = None):
     conn.close()
 
     await ctx.channel.send(f"'{quote}' has been successfully added to the database.")
+
+
+@client.command(name="addbannedwords")
+async def add_banned_word(ctx, *, new_banned_words = None):
+  if ctx.message.author.guild_permissions.administrator:
+    # Connects to database
+    conn = sqlite3.connect('bannedwords.db')
+    
+    # Create a cursor object
+    cursor = conn.cursor()
+
+    # Create a table to store the banned words if one does not exist already
+    cursor.execute(
+    'CREATE TABLE IF NOT EXISTS banned_words (id INTEGER PRIMARY KEY, word TEXT)')
+
+    # Reformat user input
+    new_banned_words = new_banned_words.replace(" ,",",").lower()
+    new_banned_words = new_banned_words.split(",")
+    # Split the list into individual strings and insert them into database
+    for word in new_banned_words:
+      
+      # Test for whether the code works
+      print(word)
+      
+      # Insert the word into the database
+      cursor.execute("INSERT INTO banned_words (word) VALUES (?)", (word,))
+      
+      # Commit the changes to the file
+      conn.commit()
+
+    # Close connection
+    conn.close()
+  else:
+    ctx.channel.send("You do not have permission to use this command")
+  
+    
 client.run(TOKEN)
+
+if __name__ == '__main__':
+  banned_words()

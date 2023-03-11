@@ -10,7 +10,8 @@ intents = discord.Intents.default()
 intents.message_content = True
 client = commands.Bot(command_prefix="!", intents=intents)
 
-prefix = ["!","@","#","$","%","&","*","?"]
+prefix = ["!", "@", "#", "$", "%", "&", "*", "?"]
+
 
 # This function updates the banned words everytime it is called. In this case it is called as the bot is first started and when it is called so it is constantly keeping up with the changes
 def banned_words():
@@ -33,7 +34,7 @@ def banned_words():
   # Make a list of banned words from file
   banned_words = rows
   print(banned_words)
-  
+
   # Close connection
   conn.close()
   return banned_words
@@ -81,7 +82,8 @@ async def add_quote(ctx, *, quote=None):
   cursor = conn.cursor()
 
   # Create a table to store the quotes if one does not exist already
-  cursor.execute("CREATE TABLE IF NOT EXISTS quotes (id INTEGER PRIMARY KEY, quote TEXT)")
+  cursor.execute(
+    "CREATE TABLE IF NOT EXISTS quotes (id INTEGER PRIMARY KEY, quote TEXT)")
 
   # Checks whether the user has put a quote after the message and whether the message contains a banned word or not
   if quote == None:
@@ -103,15 +105,21 @@ async def add_quote(ctx, *, quote=None):
     # Saves the changes you have made to the data
     conn.commit()
 
+    # Get the last row's id
+    cursor.execute("SELECT last_insert_rowid()")
+
+    # Get the information stored in the cursor object
+    row = cursor.fetchone()
+
+    # Since there's only one bit of data get the value first row of the cursor object (being the id associated with the quote)
+    last_id = row[0]
     # Closes the database connection
     conn.close()
-
-    await ctx.channel.send(
-      f"'{quote}'has been successfully added to the database.")
+    await ctx.channel.send(f"'{quote}' has been successfully added to the database and its number is {last_id}")
 
 
 @client.command(name="quote")
-async def quote(ctx, num = None):
+async def quote(ctx, num=None):
   print(num)
   # Connect to the database
   conn = sqlite3.connect("quotes.db")
@@ -120,8 +128,9 @@ async def quote(ctx, num = None):
   cursor = conn.cursor()
 
   # Create a table to store the quotes if one does not exist already
-  cursor.execute("CREATE TABLE IF NOT EXISTS quotes (id INTEGER PRIMARY KEY, quote TEXT)")
-  
+  cursor.execute(
+    "CREATE TABLE IF NOT EXISTS quotes (id INTEGER PRIMARY KEY, quote TEXT)")
+
   # Select all quotes from the database
   cursor.execute("SELECT quote FROM quotes")
 
@@ -142,18 +151,21 @@ async def quote(ctx, num = None):
       await ctx.channel.send(f"{num} is not a valid quote number")
 
     else:
+      # Checks if the quote number exists
       if len(rows) < (num - 1):
         conn.close()
-        await ctx.channel.send("That number is out of range")
+        await ctx.channel.send("That is not a current quote number.")
       else:
         # Send the quote
         conn.close()
-        await ctx.channel.send(rows[num-1][0])
-    
-    
+        await ctx.channel.send(rows[num - 1][0])
+
+
 @client.command(name="addbannedwords")
 async def add_banned_word(ctx, *, new_banned_words=None):
+  # Checks whether the message sender has administrative permissions
   if ctx.message.author.guild_permissions.administrator:
+    # Checks whether the user has inputed any new banned words
     if new_banned_words == None:
       await ctx.channel.send("You need to add a list of new banned words separated by commas after that command.")
     else:
@@ -169,7 +181,7 @@ async def add_banned_word(ctx, *, new_banned_words=None):
       # Reformat user input
       new_banned_words = new_banned_words.replace(" ,", ",").lower()
       new_banned_words = new_banned_words.split(",")
-      
+
       # Split the list into individual strings and insert them into database
       for word in new_banned_words:
         # Test for whether the code works
@@ -181,33 +193,39 @@ async def add_banned_word(ctx, *, new_banned_words=None):
         # Commit the changes to the file
         conn.commit()
 
-        # Close connection
-        conn.close()
+      # Close connection
+      conn.close()
   else:
     await ctx.channel.send("You do not have permission to use this command")
+
 
 @client.command(name="info")
 async def info(ctx):
   if ctx.message.author.guild_permissions.administrator:
-    await ctx.channel.send("INFORMATION") #ADD INFORMATION ABOUT ALL COMMANDS INCLUDING MODERATOR COMMANDS
+    await ctx.channel.send("INFORMATION")  #ADD INFORMATION ABOUT ALL COMMANDS INCLUDING MODERATOR COMMANDS
   else:
-    await ctx.channel.send("INFORMATION") #ADD INFORMATION ABOUT ALL COMANNDS EXCEPT MODERATOR COMMANDS
+    await ctx.channel.send("INFORMATION")  #ADD INFORMATION ABOUT ALL COMANNDS EXCEPT MODERATOR COMMANDS
 
 
 @client.command(name="changeprefix")
-async def command_prefix(ctx, new_command_prefix = None):
+async def command_prefix(ctx, new_command_prefix=None):
+  # Checks whether the message sender has administartor permissions or not
   if ctx.message.author.guild_permissions.administrator:
+    
+    # Checks whether the new prefix is in a list of acceptable prefixes
     if new_command_prefix in prefix:
+      # Changes the prefix
       client.command_prefix = new_command_prefix
       await ctx.channel.send(f"'{new_command_prefix}' is your new command prefix.")
+
+    # Checks whether the user has inputed a new prefix
     elif new_command_prefix == None:
-        await ctx.channel.send("You need to add a new prefix after that command")
+      await ctx.channel.send("You need to add a new prefix after that command")
     else:
       await ctx.channel.send("That is not a valid prefix")
   else:
     await ctx.channel.send("You do not have permissions to use that command")
 
-  
 client.run(TOKEN)
 
 if __name__ == '__main__':

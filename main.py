@@ -53,20 +53,32 @@ def banned_words():
   # Make a cursor object so we can edit data
   cursor = conn.cursor()
 
+  # Create a table to store the quotes if one does not exist already
+  cursor.execute('CREATE TABLE IF NOT EXISTS banned_words (id INTEGER PRIMARY KEY, word TEXT)')
+
   # Select all quotes from the database
   cursor.execute("SELECT word FROM banned_words")
 
   # Get all the data from the file
   rows = cursor.fetchall()
+  
   # Make banned_words an empty list
   banned_words = []
-  
+
   # Reformat rows because SQL makes the output weird
-  for row in rows:
-    print(row)
-    banned_words.append(row)
-  
-  # Make a list of banned words from file
+  if rows:
+    i = 0
+
+    while i < len(rows):
+      # Reformat SQL data
+      rows[i] = str(rows[i]).replace("('","")
+      rows[i] = str(rows[i]).replace("',)","")
+      banned_words.append(rows[i])
+      print(banned_words)
+      i += 1
+  else:
+    return ""
+
   # Close connection
   conn.close()
   return banned_words
@@ -239,9 +251,9 @@ async def add_banned_word(ctx, *, new_banned_words=None):
 @client.command(name="info")
 async def info(ctx):
   if ctx.message.author.guild_permissions.administrator:
-    await ctx.channel.send("INFORMATION")  #ADD INFORMATION ABOUT ALL COMMANDS INCLUDING MODERATOR COMMANDS
+    await ctx.channel.send(f"{client.command_prefix}randomquote - This is a command where the bot says a random quote\n{client.command_prefix}addquote (quote) - This is a command where the user can add their own quotes \n{client.command_prefix}quote (num) - This is a command where you can get a specific quote from the database\n{client.command_prefix}allquotes - This command gets all of the quotes and their number\n{client.command_prefix}addbannedwords (banned_words) - This is a command where a moderator can add a banned word or list of banned words separated by commas where a user cannot add a quote if it has it in it.\n{client.command_prefix}changeprefix - This command allows the moderator to change the command prefix")  # INFORMATION ABOUT ALL COMMANDS INCLUDING MODERATOR COMMANDS
   else:
-    await ctx.channel.send("INFORMATION")  #ADD INFORMATION ABOUT ALL COMANNDS EXCEPT MODERATOR COMMANDS
+    await ctx.channel.send(f"{client.command_prefix}randomquote - This is a command where the bot says a random quote\n{client.command_prefix}addquote (quote) - This is a command where the user can add their own quotes \n{client.command_prefix}quote (num) - This is a command where you can get a specific quote from the database\n{client.command_prefix}allquotes - This command gets all of the quotes and their number")  # INFORMATION ABOUT ALL COMANNDS EXCEPT MODERATOR COMMANDS
 
 
 @client.command(name="changeprefix")
@@ -303,7 +315,7 @@ async def all_quotes(ctx):
     print(rows)
     print(rows[0])
 
-    while i <= len(rows):
+    while i < len(rows):
       # Reformat SQL data
       rows[i] = str(rows[i]).replace("('","")
       rows[i] = str(rows[i]).replace("',)","")

@@ -12,6 +12,38 @@ client = commands.Bot(command_prefix="!", intents=intents)
 
 prefix = ["!", "@", "#", "$", "%", "&", "*", "?"]
 
+# The use of the first 2 functions are to constantly update the essential databases of commandprefix and bannedwords.
+
+# This function updates the command prefix everytime it is called. In this case it is called constantly with theclient.command_prefix = command_prefix() line
+def command_prefix():
+  # Connect to banned words data base
+  conn = sqlite3.connect("commandprefix.db")
+
+  # Make a cursor object so we can edit data
+  cursor = conn.cursor()
+  
+  # Create a table to store the banned words if one does not exist already
+  cursor.execute("CREATE TABLE IF NOT EXISTS command_prefix (id INTEGER PRIMARY KEY, prefix TEXT)")
+
+  # Select all quotes from the database
+  cursor.execute("SELECT prefix FROM command_prefix")
+  
+  rows = cursor.fetchall()
+
+  # Checks whether there is anything in the dataabase
+  if rows:
+    # Reformat SQL data
+    rows[0] = str(rows[0]).replace("('","")
+    rows[0] = str(rows[0]).replace("',)","")
+    command_prefix = rows[0]
+  # Basically if there is not already something in the database make the command_prefix default
+  else:
+    command_prefix = "!"
+  
+  return command_prefix
+
+client.command_prefix = command_prefix()
+
 
 # This function updates the banned words everytime it is called. In this case it is called constantly with the banned_words = banned_words() line
 def banned_words():
@@ -35,9 +67,6 @@ def banned_words():
     banned_words.append(row)
   
   # Make a list of banned words from file
-  
-  print(banned_words)
-
   # Close connection
   conn.close()
   return banned_words
@@ -222,8 +251,23 @@ async def command_prefix(ctx, new_command_prefix=None):
 
     # Checks whether the new prefix is in a list of acceptable prefixes
     if new_command_prefix in prefix:
-      # Changes the prefix
+      # Connects to database
+      conn = sqlite3.connect("commandprefix.db")
+
+      # Create a cursor object
+      cursor = conn.cursor()
+
+      # Insert the word into the database
+      cursor.execute('UPDATE command_prefix SET id=?, prefix=? WHERE id=1', ('1', new_command_prefix))
+
+      # Commit the changes to the file
+      conn.commit()
+
+      # Close database connection
+      conn.close()
+
       client.command_prefix = new_command_prefix
+
       await ctx.channel.send(f"'{new_command_prefix}' is your new command prefix.")
 
     # Checks whether the user has inputed a new prefix
